@@ -1,10 +1,11 @@
 import pandas as pd
 import json
 import numpy as np
+
 # reformating data
 page_topic = pd.read_csv("datadays2020_contest_public_dataset/page_topic.csv")
 # print(page_topic.head())
-new_page_topic_list =[]
+new_page_topic_list = []
 current_row = dict()
 current_pageId = -1
 for index, row in page_topic.iterrows():
@@ -23,16 +24,32 @@ new_page_topic.fillna(value=0, inplace=True)
 # new_page_topic.to_csv(path_or_buf='a.csv', index=False)
 
 
-
 # =======================================================================
 # reformating data
 
-user_page_view =pd.read_csv("datadays2020_contest_public_dataset/user_page_view.csv")
-new_user_page_view = (user_page_view.groupby(['userId', 'pageId'], sort=False).sum())
+user_page_view = pd.read_csv("datadays2020_contest_public_dataset/user_page_view.csv")
+# reduction
+user_page_view["timestamp"] = user_page_view["timestamp"].apply(lambda x: x >> 30)
 
-print(new_user_page_view.head())
-
+new_user_page_view = (user_page_view.groupby(['pageId', 'userId'], sort=False).sum().reset_index())
 
 # =================================================
-result = pd.merge(new_user_page_view[["userId", "pageId", "timestamp"]], new_page_topic, on='pageId')
+# merging page views & page topics
+result = pd.merge(new_page_topic, new_user_page_view, on='pageId', how='left')
 # print(result.head())
+# ===================================================
+result.drop('pageId', axis=1, inplace=True)
+print(result.describe())
+for column in list(result.columns):
+    if column != 'userId' and column != 'timestamp':
+        print(column)
+        print(result[column])
+        print("***************")
+        result[column] = np.multiply(result[column], result['timestamp'])
+        print(result[column])
+        print(result['timestamp'])
+#         todo debug multiplying
+print("____________________________________________________")
+print(result.describe())
+
+result = result.groupby('userId', as_index=False, sort=False)
